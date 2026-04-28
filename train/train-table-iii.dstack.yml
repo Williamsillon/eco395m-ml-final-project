@@ -9,10 +9,28 @@ env:
   - TOKENIZERS_PARALLELISM=false
 
 commands:
-  - pip install --upgrade pip
-  - pip install -r requirements.txt
   - |
-    python -u train_table_iii_cloud.py \
+    set -eux
+    pwd
+    ls -la
+    ls -la train || true
+
+    if [ -f train/requirements.txt ]; then
+      REQ=train/requirements.txt
+      SCRIPT=train/train_table_iii_cloud.py
+    elif [ -f requirements.txt ]; then
+      REQ=requirements.txt
+      SCRIPT=train_table_iii_cloud.py
+    else
+      echo "Could not find requirements.txt. Files available:"
+      find . -maxdepth 3 -type f | sort
+      exit 1
+    fi
+
+    pip install --upgrade pip
+    pip install -r "$REQ"
+
+    python -u "$SCRIPT" \
       --data-path Wildfire_Dataset.csv \
       --output-dir artifacts/table_iii_dstack \
       --chronos-model amazon/chronos-t5-mini \

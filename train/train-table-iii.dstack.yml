@@ -7,14 +7,12 @@ env:
   - HF_HOME=/root/.cache/huggingface
   - HF_HUB_ENABLE_HF_TRANSFER=1
   - TOKENIZERS_PARALLELISM=false
-  - KAGGLE_USERNAME
-  - KAGGLE_KEY
 
 commands:
   - pip install --upgrade pip
-  - pip install -r train/requirements.txt
+  - pip install -r requirements.txt
   - |
-    python -u train/train_table_iii_cloud.py \
+    python -u train_table_iii_cloud.py \
       --data-path Wildfire_Dataset.csv \
       --output-dir artifacts/table_iii_dstack \
       --chronos-model amazon/chronos-t5-mini \

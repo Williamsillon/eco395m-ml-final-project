@@ -37,6 +37,11 @@ commands:
     python -u "$SCRIPT" \
       --data-path Wildfire_Dataset.csv \
       --output-dir artifacts/table_iii_dstack \
+      --sequence-mode event_order \
+      --time-split \
+      --test-start 2025-01-01 \
+      --test-end 2025-04-30 \
+      --reference-index 60 \
       --chronos-model amazon/chronos-t5-mini \
       --chronos-batch-size 256 \
       --chronos-pca-components 256 \

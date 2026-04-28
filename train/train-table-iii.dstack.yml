@@ -3,6 +3,10 @@ name: wildfire-table-iii-train
 
 python: "3.11"
 
+repos:
+  - local_path: ..
+    path: .
+
 env:
   - HF_HOME=/root/.cache/huggingface
   - HF_HUB_ENABLE_HF_TRANSFER=1

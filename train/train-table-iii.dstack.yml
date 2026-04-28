@@ -1,0 +1,37 @@
+type: task
+name: wildfire-table-iii-train
+
+python: "3.11"
+
+env:
+  - HF_HOME=/root/.cache/huggingface
+  - HF_HUB_ENABLE_HF_TRANSFER=1
+  - TOKENIZERS_PARALLELISM=false
+  - KAGGLE_USERNAME
+  - KAGGLE_KEY
+
+commands:
+  - pip install --upgrade pip
+  - pip install -r train/requirements.txt
+  - |
+    python -u train/train_table_iii_cloud.py \
+      --data-path Wildfire_Dataset.csv \
+      --output-dir artifacts/table_iii_dstack \
+      --chronos-model amazon/chronos-t5-mini \
+      --chronos-batch-size 256 \
+      --chronos-pca-components 256 \
+      --batch-size 128 \
+      --epochs 10 \
+      --mlp-epochs 8 \
+      --torch-threads 8 \
+      --n-jobs 8
+
+resources:
+  cpu: 8..
+  memory: 48GB..
+  gpu: 16GB..
+  disk: 200GB
+  shm_size: 16GB
+
+spot_policy: auto
+max_duration: 12h

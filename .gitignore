@@ -1,2 +1,4 @@
 .env
 Wildfire_Dataset.csv
+__pycache__/
+*.py[cod]

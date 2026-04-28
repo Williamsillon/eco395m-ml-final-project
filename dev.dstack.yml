@@ -1,0 +1,12 @@
+type: dev-environment
+name: wildfire-chronos
+
+python: "3.11"
+ide: jupyter
+
+setup:
+  - pip install -r requirements.txt
+
+resources:
+  gpu:
+    memory: 16GB..  # T4 or better; dstack Sky picks the cheapest available

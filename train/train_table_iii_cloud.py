@@ -229,7 +229,19 @@ def make_split(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     if args.max_sequences and args.max_sequences < len(seqs):
         rng = np.random.default_rng(args.seed)
-        idx = rng.permutation(len(seqs))[: args.max_sequences]
+        if args.time_split:
+            test_start = pd.Timestamp(args.test_start)
+            test_end = pd.Timestamp(args.test_end)
+            test_idx = np.flatnonzero((anchor_dates >= test_start) & (anchor_dates <= test_end))
+            train_idx = np.flatnonzero(~((anchor_dates >= test_start) & (anchor_dates <= test_end)))
+            n_test = min(len(test_idx), max(1, int(args.max_sequences * args.test_size)))
+            n_train = max(1, args.max_sequences - n_test)
+            idx = np.concatenate([
+                rng.choice(train_idx, size=min(n_train, len(train_idx)), replace=False),
+                rng.choice(test_idx, size=n_test, replace=False),
+            ])
+        else:
+            idx = rng.permutation(len(seqs))[: args.max_sequences]
         seqs, labels, anchor_dates = seqs[idx], labels[idx], anchor_dates[idx]
         print(f"Subsampled to {len(seqs):,} sequences")
 
@@ -683,7 +695,7 @@ def chronos_embeddings(
             ctx = torch.tensor(seq_array[start : start + batch_size, :, f], dtype=torch.float32)
             out = pipeline.embed(ctx)
             emb = out[0] if isinstance(out, tuple) else out
-            slices.append(emb.mean(dim=1).cpu().numpy())
+            slices.append(emb.mean(dim=1).float().cpu().numpy())
         block = np.concatenate(slices, axis=0)
         blocks.append(block)
         print(f"  Chronos encoded {f + 1:02d}/{len(names)} {name}: {block.shape}")

@@ -1,0 +1,67 @@
+type: task
+name: wildfire-chronos-smoke
+
+python: "3.11"
+
+repos:
+  - local_path: ..
+    path: .
+
+env:
+  - HF_HOME=/root/.cache/huggingface
+  - HF_HUB_ENABLE_HF_TRANSFER=1
+  - TOKENIZERS_PARALLELISM=false
+
+commands:
+  - |
+    set -eux
+    pwd
+    ls -la
+    ls -la train || true
+
+    if [ -f train/requirements.txt ]; then
+      REQ=train/requirements.txt
+      SCRIPT=train/train_table_iii_cloud.py
+    elif [ -f requirements.txt ]; then
+      REQ=requirements.txt
+      SCRIPT=train_table_iii_cloud.py
+    else
+      echo "Could not find requirements.txt. Files available:"
+      find . -maxdepth 3 -type f | sort
+      exit 1
+    fi
+
+    pip install --upgrade pip
+    pip install -r "$REQ"
+
+    python -u "$SCRIPT" \
+      --data-path Wildfire_Dataset.csv \
+      --output-dir artifacts/chronos_smoke \
+      --sequence-mode event_order \
+      --time-split \
+      --test-start 2025-01-01 \
+      --test-end 2025-04-30 \
+      --reference-index 60 \
+      --max-sequences 300 \
+      --skip-classical \
+      --skip-neural \
+      --chronos-model amazon/chronos-t5-tiny \
+      --chronos-batch-size 32 \
+      --chronos-pca-components 32 \
+      --chronos-features erc,bi,vpd \
+      --batch-size 32 \
+      --mlp-epochs 1 \
+      --rf-trees 5 \
+      --xgb-trees 5 \
+      --torch-threads 4 \
+      --n-jobs 4
+
+resources:
+  cpu: 4..
+  memory: 16GB..
+  gpu: 8GB..
+  disk: 100GB
+  shm_size: 8GB
+
+spot_policy: auto
+max_duration: 2h

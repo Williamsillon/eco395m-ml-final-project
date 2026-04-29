@@ -1,0 +1,21 @@
+TABLE III: Wildfire ignition model comparison
+                                    Model  Accuracy [%]  Precision  Recall   F1  Threshold  ROC-AUC  PR-AUC     Seconds
+                          CNN-LSTM (ours)          90.2       0.96    0.91 0.93      0.620    0.952   0.984   63.161437
+                                 XGBoost*          89.4       0.94    0.92 0.93      0.247    0.948   0.984   25.322014
+                       Gradient Boosting*          88.3       0.93    0.92 0.92      0.237    0.952   0.986 2022.508698
+                           Random Forest*          86.6       0.95    0.87 0.91      0.253    0.943   0.981  126.116842
+                     K-Nearest Neighbors*          65.0       0.90    0.62 0.73      0.400    0.743   0.886   15.872527
+                              Simple-MLP*          87.3       0.91    0.93 0.92      0.590    0.915   0.974   22.978119
+                           Decision Tree*          76.9       0.77    1.00 0.87      0.000    0.651   0.834  184.206785
+                           Two-Layer-LSTM          86.2       0.91    0.91 0.91      0.602    0.876   0.955   48.036083
+                         LightTS-Inspired          90.7       0.99    0.89 0.94      0.609    0.968   0.991   31.944992
+                     Logistic Regression*          83.4       0.87    0.92 0.90      0.433    0.876   0.961   81.324528
+                             Naive Bayes*          83.0       0.98    0.79 0.88      0.000    0.900   0.973    0.833137
+            Chronos Embeddings + XGBoost*          88.5       0.95    0.90 0.92      0.250    0.957   0.987    5.219769
+  Chronos Embeddings + Gradient Boosting*          89.2       0.95    0.90 0.93      0.234    0.961   0.988 1316.631940
+      Chronos Embeddings + Random Forest*          86.6       0.98    0.84 0.91      0.260    0.957   0.986  115.760063
+Chronos Embeddings + K-Nearest Neighbors*          71.5       0.88    0.73 0.80      0.400    0.780   0.910    4.663888
+         Chronos Embeddings + Simple-MLP*          89.2       0.96    0.90 0.93      0.579    0.944   0.980   22.191739
+      Chronos Embeddings + Decision Tree*          76.9       0.77    1.00 0.87      0.000    0.616   0.816   73.617059
+Chronos Embeddings + Logistic Regression*          88.7       0.91    0.95 0.93      0.409    0.960   0.989    3.508487
+        Chronos Embeddings + Naive Bayes*          81.5       0.98    0.78 0.87      0.194    0.920   0.977    0.258499

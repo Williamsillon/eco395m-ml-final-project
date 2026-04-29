@@ -7,6 +7,10 @@ repos:
   - local_path: ..
     path: .
 
+volumes:
+  - name: wildfire-artifacts
+    path: /mnt/artifacts
+
 env:
   - HF_HOME=/root/.cache/huggingface
   - HF_HUB_ENABLE_HF_TRANSFER=1
@@ -36,7 +40,7 @@ commands:
 
     python -u "$SCRIPT" \
       --data-path Wildfire_Dataset.csv \
-      --output-dir artifacts/table_iii_dstack \
+      --output-dir /mnt/artifacts/table_iii_dstack \
       --sequence-mode event_order \
       --time-split \
       --test-start 2025-01-01 \

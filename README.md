@@ -77,9 +77,9 @@ These models operate directly on the 3D sequence tensor without flattening and a
 After obtaining baseline results, we extracted embeddings using a frozen pretrained Amazon Chronos T5 Mini model. Each GRIDMET feature is encoded as a univariate time series, mean-pooled, and concatenated into a flat embedding per sample, then reduced via PCA before classification. The full implementation is in `train/train_table_iii_cloud.py`. We re-ran all baseline classifiers on these embeddings to evaluate whether richer temporal representations improve predictive performance.
 
 #### Model Evaluation
-All models are evaluated in dstack using the same train/test split to ensure consistency in comparison. Predictive performance is measured using accuracy, precision, recall, and F1-score on both the training and test datasets. This allows us to evaluate overall model accuracy while also identifying any potential overfitting. The table reproduced in the results section includes the results for the aforementioned model with and without the embeddings. 
+All models are evaluated using the same train/test split to ensure consistency. Predictive performance is measured using accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Thresholds are tuned on a held-out validation set rather than defaulting to 0.5, which better reflects real-world operating conditions for fire detection. The full results table includes all models with and without Chronos embeddings.
 
-*Marco can you elaborate on the use of dstack*
+All models were trained together in a single [dstack](https://dstack.ai) cloud job (`train/train_table_iii_cloud.py`) to ensure all results come from the same environment and split. Results are in `output/models_table.txt`.
 ### Modeling Limitations
 *Marco??? all I can think of is that the code took a long time. 
 ## Results

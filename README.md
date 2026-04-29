@@ -81,7 +81,11 @@ All models are evaluated using the same train/test split to ensure consistency. 
 
 All models were trained together in a single [dstack](https://dstack.ai) cloud job (`train/train_table_iii_cloud.py`) to ensure all results come from the same environment and split. Results are in `output/models_table.txt`.
 ### Modeling Limitations
-*Marco??? all I can think of is that the code took a long time. 
+The time-based split holds out all sequences from Jan–Apr 2025 for testing. While this aligns with the paper's evaluation period, the resulting test set is small relative to the full dataset, which limits the statistical reliability of the reported metrics.
+
+No systematic hyperparameter tuning was performed. All models use manually chosen parameters, and systematic search — particularly for XGBoost and the neural architectures — would likely improve performance across the board.
+
+Compute constraints limited the number of configurations we could explore. At full scale, Gradient Boosting and Chronos + Gradient Boosting each required over 20 minutes of training time, making iterative experimentation impractical without dedicated cloud resources.
 ## Results
 We evaluated all of the aforementioned models using the same train/test split and measured performance across accuracy, precision, recall, F1, ROC-AUC, and PR-AUC. Model training was accelerated using dstack to ensure efficient computation across our models like Gradient Boosting and CNN-LSTM. The results are posted in a [table](output/models_table.txt), and they are also pasted below:
 | Model | Accuracy [%] | Precision | Recall | F1 | Threshold | ROC-AUC | PR-AUC | Seconds |

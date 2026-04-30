@@ -1,6 +1,8 @@
 # eco395m-ml-final-project
 ## Project Overview
-The objective of this project is to predict forest fires by replicating a portion of _Spatiotemporal Wildfire Prediction and Reinforcement Learning for Helitack Suppression_, and generate new models to compete with the fire predictions from the study. In this project we engineer new features, implement new models, and utilize chronos embeddings. 
+The objective of this project is to predict forest fires by replicating a portion of _Spatiotemporal Wildfire Prediction and Reinforcement Learning for Helitack Suppression_. We evaluate eleven models ranging from classical baselines such as Logistic Regression and XGBoost to time-series aware neural architectures, including our proposed CNN-LSTM model. We benchmark each model against accuracy, precision, recall, threshold, F1, ROC-AUC, PR-AUC, and computation time.
+
+Furthermore, we incorporate pretrained Amazon Chronos T5 Mini embeddings to evaluate whether richer temporal representations improve predictive performance over the raw features alone. All of the models are trained on the US Wildfire Dataset (2014-2025) using dstack for cloud-accelerated computation. The results are compared with and without Chronos embeddings across all models.
 ## Data
 ### Data Sources
 The project analyzes the "US Wildfire Dataset (2014-2025)" found on [kaggle](https://www.kaggle.com/datasets/firecastrl/us-wildfire-dataset/data). The dataset provides information on precipitation, relative humidity, specific humidity, solar radiation, temperatures, wind speed, vapor pressure deficit, fuel moisture indices, energy release component, burning index, and evapotranspiration across 126,800 samples in the continental United States. This data is time series data split into 75 day windows at each coordinate. Each 75 day window comprises of 60 days prior to the event, the ignition/non-ignition day, and the following 14 days. The data includes 50,720 positive (ignition) events, and 76,080 synthesized negative events. 
@@ -134,6 +136,16 @@ These results indicate that our time-series aware models performed competitively
 On the other hand, XGBoost performed the strongest out of the classical baseline models, with 89.4% accuracy. Gradient Boosting also performed well with a 88.3% accuracy, but with a significantly longer training time of 2022 seconds versus XGBoost's 25 seconds. K-Nearest Neighbors was the weakest baseline at 65.0% accuracy. This finding is not surprising given that distance-based methods tend to scale poorly when dealing with high-dimensional flattened feature vectors.
 
 Regarding the Chronos embedding results, we find that the embedding resulted in modest, but positive improvements across most models, except for the XGBoost and Naive Bayes models. Logistic Regression saw a large improvement, going from 83.4% accurarcy without the embeddings to 88.7% accuracy with the embeddings. This suggests these pretrained temporal representations captured structure that the linear Logistic regression model cannot learn on its own. Additionally, the Chronos embeddings also improved KNN from 65.0% accurary to 71.5% accurary.
+
+Below are the models ranked visually by accuracy and ROC-AUC values:
+
+<img src="artifacts/accuracy_chart.png" width="40%"/>
+<img src="artifacts/roc_auc_chart.png" width="40%"/>
+
+When making comparisons across the accuracy and ROC-AUC bar charts, we find that the rankings are somewhat consistent. The LightTS-Inspired, CNN-LSTM, and XGBoost models remain at the top of the rankings for both accuracy and ROC-AUC, while K-Nearest Neighbors and Decision Tree remain at the bottom of the rankings. Given the results, it is evident that the LightTS-Inspired model outranked our proposed CNN-LSTM in both metrics, which is noteworthy because LightTS-Inspired is a more parsimonious model. This suggests that, for this dataset, the additional LSTM layers in our model did not translate to better performance despite the increased complexity.
+
+Overall, most models had ROC-AUC scores above 0.90. This indicates that our models are reliably ranking wildfire sequences above non-wildfire sequences across all possible thresholds, not just at the threshold we chose.
+
 ## Recommendations
 The CNN-LSTM from the paper achieved 90.2% accuracy and a ROC-AUC of 0.952. Chronos + Logistic Regression matched or exceeded this (ROC-AUC 0.960, PR-AUC 0.989) at a fraction of the compute cost, demonstrating that a frozen pretrained encoder paired with a simple classifier can substitute for a purpose-built sequence architecture on this task.
 

@@ -9,6 +9,10 @@ Classical baselines flatten sequences to 1125 features. Neural baselines use
 the 3D sequence tensor. The Chronos section freezes a pretrained Chronos
 encoder, mean-pools one univariate embedding per feature, concatenates those
 embeddings, and then trains the same baseline family on those embeddings.
+
+After each model fits, grouped permutation importance tables are written for
+the original weather variables, or for leading PCA components in the Chronos
+embedding models where original variables are mixed by PCA.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ import shutil
 import time
 import importlib.util
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import joblib
 import numpy as np
@@ -126,6 +130,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-classical", action="store_true")
     parser.add_argument("--skip-neural", action="store_true")
     parser.add_argument("--skip-chronos", action="store_true")
+    parser.add_argument("--feature-importance", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--feature-importance-repeats", type=int, default=3)
+    parser.add_argument("--feature-importance-max-samples", type=int, default=5000)
+    parser.add_argument(
+        "--embedding-feature-importance-components",
+        type=int,
+        default=50,
+        help="Number of leading Chronos PCA components to permute for feature importance; use 0 for all components.",
+    )
     parser.add_argument("--chronos-model", default="amazon/chronos-t5-mini")
     parser.add_argument("--chronos-batch-size", type=int, default=256)
     parser.add_argument("--chronos-pca-components", type=int, default=256)
@@ -522,6 +535,163 @@ def safe_artifact_name(name: str) -> str:
     )
 
 
+FeatureGroup = tuple[str, str, int | list[int]]
+
+
+def sequence_feature_groups(feature_names: Iterable[str]) -> list[FeatureGroup]:
+    return [(name, "sequence_feature", idx) for idx, name in enumerate(feature_names)]
+
+
+def flat_sequence_feature_groups(seq_len: int, feature_names: Iterable[str]) -> list[FeatureGroup]:
+    names = list(feature_names)
+    return [
+        (name, "columns", [t * len(names) + idx for t in range(seq_len)])
+        for idx, name in enumerate(names)
+    ]
+
+
+def component_feature_groups(n_components: int, max_components: int) -> list[FeatureGroup]:
+    limit = n_components if max_components == 0 else min(max_components, n_components)
+    return [(f"PC{idx + 1:03d}", "columns", [idx]) for idx in range(limit)]
+
+
+def sample_for_importance(
+    X: np.ndarray,
+    y: np.ndarray,
+    max_samples: int | None,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if not max_samples or max_samples >= len(X):
+        return X, y
+    classes = np.unique(y)
+    stratify = (
+        y
+        if len(classes) == 2 and max_samples >= len(classes) and min(np.bincount(y.astype(int))) >= 2
+        else None
+    )
+    idx, _ = train_test_split(
+        np.arange(len(X)),
+        train_size=max_samples,
+        stratify=stratify,
+        random_state=seed,
+    )
+    idx = np.sort(idx)
+    return X[idx], y[idx]
+
+
+def importance_score(y_true: np.ndarray, y_score: np.ndarray) -> float:
+    if len(np.unique(y_true)) < 2:
+        return float("nan")
+    return float(average_precision_score(y_true, y_score))
+
+
+def permute_group(X: np.ndarray, group: FeatureGroup, rng: np.random.Generator) -> np.ndarray:
+    _, group_kind, group_idx = group
+    X_perm = X.copy()
+    row_order = rng.permutation(len(X_perm))
+    if group_kind == "sequence_feature":
+        X_perm[:, :, int(group_idx)] = X_perm[row_order, :, int(group_idx)]
+    elif group_kind == "columns":
+        X_perm[:, group_idx] = X_perm[row_order][:, group_idx]
+    else:
+        raise ValueError(f"Unknown feature importance group kind: {group_kind}")
+    return X_perm
+
+
+def write_feature_importance_table(
+    model_name: str,
+    rows: list[dict],
+    output_dir: Path,
+) -> None:
+    if not rows:
+        return
+    importance_dir = output_dir / "feature_importance"
+    importance_dir.mkdir(parents=True, exist_ok=True)
+    table = pd.DataFrame(rows).sort_values(["Rank", "Feature"]).reset_index(drop=True)
+    safe_name = safe_artifact_name(model_name)
+    table.to_csv(importance_dir / f"feature_importance_{safe_name}.csv", index=False)
+
+
+def write_all_feature_importances(rows: list[dict], output_dir: Path) -> pd.DataFrame:
+    if not rows:
+        return pd.DataFrame()
+    importance_dir = output_dir / "feature_importance"
+    importance_dir.mkdir(parents=True, exist_ok=True)
+    table = pd.DataFrame(rows)
+    table["Model"] = pd.Categorical(table["Model"], categories=TABLE_ORDER, ordered=True)
+    table = table.sort_values(["Model", "Rank", "Feature"]).reset_index(drop=True)
+    table["Model"] = table["Model"].astype(str)
+    rounded = table.round(
+        {
+            "Baseline PR-AUC": 4,
+            "Importance": 4,
+            "Importance Std": 4,
+            "Permuted PR-AUC": 4,
+        }
+    )
+    rounded.to_csv(importance_dir / "table_iii_feature_importance.csv", index=False)
+    with (importance_dir / "table_iii_feature_importance.json").open("w") as f:
+        json.dump(rounded.to_dict(orient="records"), f, indent=2)
+    return rounded
+
+
+def grouped_permutation_importance(
+    model_name: str,
+    input_name: str,
+    X: np.ndarray,
+    y: np.ndarray,
+    score_fn: Callable[[np.ndarray], np.ndarray],
+    feature_groups: list[FeatureGroup],
+    args: argparse.Namespace,
+    output_dir: Path,
+) -> list[dict]:
+    if not args.feature_importance or args.feature_importance_repeats <= 0:
+        return []
+
+    X_imp, y_imp = sample_for_importance(X, y, args.feature_importance_max_samples, args.seed)
+    baseline_scores = score_fn(X_imp)
+    baseline = importance_score(y_imp, baseline_scores)
+    if np.isnan(baseline):
+        print(f"  skipped feature importance for {model_name}: importance sample has one class")
+        return []
+
+    rng = np.random.default_rng(args.seed)
+    rows = []
+    print(f"  computing feature importance for {model_name} on {len(X_imp):,} test rows")
+    for feature_name, group_kind, group_idx in feature_groups:
+        permuted_scores = []
+        drops = []
+        group = (feature_name, group_kind, group_idx)
+        for _ in range(args.feature_importance_repeats):
+            X_perm = permute_group(X_imp, group, rng)
+            permuted = importance_score(y_imp, score_fn(X_perm))
+            permuted_scores.append(permuted)
+            drops.append(baseline - permuted)
+        rows.append(
+            {
+                "Model": model_name,
+                "Input": input_name,
+                "Feature": feature_name,
+                "Metric": "PR-AUC",
+                "Baseline PR-AUC": baseline,
+                "Importance": float(np.mean(drops)),
+                "Importance Std": float(np.std(drops, ddof=1)) if len(drops) > 1 else 0.0,
+                "Permuted PR-AUC": float(np.mean(permuted_scores)),
+                "Repeats": args.feature_importance_repeats,
+                "Samples": len(X_imp),
+            }
+        )
+
+    table = pd.DataFrame(rows).sort_values("Importance", ascending=False).reset_index(drop=True)
+    table["Rank"] = np.arange(1, len(table) + 1)
+    ranked_rows = table.to_dict(orient="records")
+    write_feature_importance_table(model_name, ranked_rows, output_dir)
+    top = table.head(min(5, len(table)))[["Feature", "Importance"]]
+    print("  top feature importances:")
+    print(top.to_string(index=False))
+    return ranked_rows
+
+
 def classical_baseline_models(
     args: argparse.Namespace,
     scaled,
@@ -575,6 +745,7 @@ def fit_classical_models(
     y_test: np.ndarray,
     args: argparse.Namespace,
     output_dir: Path,
+    feature_importance_rows: list[dict],
 ) -> list[dict]:
     scaled = lambda estimator: Pipeline(
         [
@@ -611,6 +782,19 @@ def fit_classical_models(
         pd.DataFrame({"y_true": y_test, "y_pred": y_pred}).to_csv(
             output_dir / f"predictions_{safe_name}.csv", index=False
         )
+        feature_importance_rows.extend(
+            grouped_permutation_importance(
+                name,
+                "raw sequence variables",
+                X_test,
+                y_test,
+                lambda X, fitted=estimator: positive_scores(fitted, X),
+                sequence_feature_groups(FEATURES),
+                args,
+                output_dir,
+            )
+        )
+        write_all_feature_importances(feature_importance_rows, output_dir)
         print(f"  done in {row['Seconds']:.1f}s: F1={row['F1']:.3f}")
     return rows
 
@@ -625,6 +809,7 @@ def fit_neural_models(
     args: argparse.Namespace,
     output_dir: Path,
     device: torch.device,
+    feature_importance_rows: list[dict],
 ) -> list[dict]:
     rows = []
     model_dir = output_dir / "models"
@@ -666,6 +851,25 @@ def fit_neural_models(
         pd.DataFrame({"y_true": y_test, "y_pred": y_pred}).to_csv(
             output_dir / f"predictions_{safe_name}.csv", index=False
         )
+        if Xte.ndim == 2:
+            input_name = "scaled flattened sequence variables"
+            feature_groups = flat_sequence_feature_groups(X_test.shape[1], FEATURES)
+        else:
+            input_name = "scaled sequence variables"
+            feature_groups = sequence_feature_groups(FEATURES)
+        feature_importance_rows.extend(
+            grouped_permutation_importance(
+                name,
+                input_name,
+                Xte,
+                y_test,
+                lambda X, fitted=model: predict_torch_scores(fitted, X, device, batch_size=args.batch_size * 2),
+                feature_groups,
+                args,
+                output_dir,
+            )
+        )
+        write_all_feature_importances(feature_importance_rows, output_dir)
         print(f"  done in {row['Seconds']:.1f}s: F1={row['F1']:.3f}")
     return rows
 
@@ -774,6 +978,7 @@ def fit_embedding_baseline_models(
     args: argparse.Namespace,
     output_dir: Path,
     device: torch.device,
+    feature_importance_rows: list[dict],
 ) -> list[dict]:
     identity = lambda estimator: Pipeline([("model", estimator)])
     scaled_identity = lambda estimator: Pipeline(
@@ -810,6 +1015,22 @@ def fit_embedding_baseline_models(
         pd.DataFrame({"y_true": y_test, "y_pred": y_pred}).to_csv(
             output_dir / f"predictions_{safe_name}.csv", index=False
         )
+        feature_importance_rows.extend(
+            grouped_permutation_importance(
+                name,
+                "Chronos PCA components",
+                X_test_emb,
+                y_test,
+                lambda X, fitted=estimator: positive_scores(fitted, X),
+                component_feature_groups(
+                    X_test_emb.shape[1],
+                    args.embedding_feature_importance_components,
+                ),
+                args,
+                output_dir,
+            )
+        )
+        write_all_feature_importances(feature_importance_rows, output_dir)
         print(f"  done in {row['Seconds']:.1f}s: F1={row['F1']:.3f}")
 
     start = time.perf_counter()
@@ -837,6 +1058,22 @@ def fit_embedding_baseline_models(
     pd.DataFrame({"y_true": y_test, "y_pred": y_pred}).to_csv(
         output_dir / f"predictions_{safe_name}.csv", index=False
     )
+    feature_importance_rows.extend(
+        grouped_permutation_importance(
+            name,
+            "Chronos PCA components",
+            X_test_emb,
+            y_test,
+            lambda X, fitted=model: predict_torch_scores(fitted, X, device, batch_size=args.batch_size * 2),
+            component_feature_groups(
+                X_test_emb.shape[1],
+                args.embedding_feature_importance_components,
+            ),
+            args,
+            output_dir,
+        )
+    )
+    write_all_feature_importances(feature_importance_rows, output_dir)
     print(f"  done in {row['Seconds']:.1f}s: F1={row['F1']:.3f}")
     return rows
 
@@ -868,12 +1105,38 @@ def main() -> None:
     gc.collect()
 
     rows = []
+    feature_importance_rows = []
     if not args.skip_classical:
-        rows.extend(fit_classical_models(X_train, X_val, X_test, y_train, y_val, y_test, args, output_dir))
+        rows.extend(
+            fit_classical_models(
+                X_train,
+                X_val,
+                X_test,
+                y_train,
+                y_val,
+                y_test,
+                args,
+                output_dir,
+                feature_importance_rows,
+            )
+        )
         print(write_results(rows, output_dir))
 
     if not args.skip_neural:
-        rows.extend(fit_neural_models(X_train, X_val, X_test, y_train, y_val, y_test, args, output_dir, device))
+        rows.extend(
+            fit_neural_models(
+                X_train,
+                X_val,
+                X_test,
+                y_train,
+                y_val,
+                y_test,
+                args,
+                output_dir,
+                device,
+                feature_importance_rows,
+            )
+        )
         print(write_results(rows, output_dir))
 
     if not args.skip_chronos:
@@ -882,13 +1145,26 @@ def main() -> None:
         )
         rows.extend(
             fit_embedding_baseline_models(
-                X_train_emb, X_val_emb, X_test_emb, y_train, y_val, y_test, args, output_dir, device
+                X_train_emb,
+                X_val_emb,
+                X_test_emb,
+                y_train,
+                y_val,
+                y_test,
+                args,
+                output_dir,
+                device,
+                feature_importance_rows,
             )
         )
 
     table = write_results(rows, output_dir)
+    importance_table = write_all_feature_importances(feature_importance_rows, output_dir)
     print("\nTABLE III: Wildfire ignition model comparison")
     print(table.to_string(index=False))
+    if not importance_table.empty:
+        print("\nFeature importance tables written to:")
+        print(output_dir / "feature_importance")
     print(
         "\n* Baselines not inherently time-series-aware; feature vectors flattened to "
         "1125 dimensions (15 variables x 75 timesteps). Chronos Embeddings rows use "

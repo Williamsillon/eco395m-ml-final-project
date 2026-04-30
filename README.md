@@ -80,7 +80,7 @@ We also include K-Nearest Neighbors and Naive Bayes as additional benchmarks. KN
 We implement several neural network architectures to capture both spatial and temporal dependencies in the data.
 
 - Simple-MLP: A baseline feedforward neural network that captures nonlinear relationships using the same flattened 1,125-dimensional feature vectors as the classical models. This serves as a reference point for what the time-series aware neural models can improve on.
-- CNN-LSTM (ours): Combines convolutional layers for local temporal feature extraction with LSTM layers for longer range sequential dependencies. This is our proposed model and we expect it to benefit from both the pattern detection of the CNN and the sequential memory of the LSTM.
+- CNN-LSTM (ours): Combines convolutional layers for local temporal feature extraction with LSTM layers for longer range sequential dependencies. This is the paper's flagship model and we expect it to benefit from both the pattern detection of the CNN and the sequential memory of the LSTM.
 - Two-Layer-LSTM: Focuses on sequential dependencies in the data by modeling temporal patterns across multiple periods using two stacked LSTM layers.
 - LightTS-Inspired: A lightweight time series model that uses 1D convolutions and global average pooling to efficiently capture temporal structure without the computational overhead of recurrent layers.
 

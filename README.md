@@ -116,8 +116,9 @@ On the other hand, XGBoost performed the strongest out of the classical baseline
 
 Regarding the Chronos embedding results, we find that the embedding resulted in modest, but positive improvements across most models, except for the XGBoost and Naive Bayes models. Logistic Regression saw a large improvement, going from 83.4% accurarcy without the embeddings to 88.7% accuracy with the embeddings. This suggests these pretrained temporal representations captured structure that the linear Logistic regression model cannot learn on its own. Additionally, the Chronos embeddings also improved KNN from 65.0% accurary to 71.5% accurary.
 ## Recommendations
-*????
-we recommend you hire Always Ready Analytics*
+The CNN-LSTM from the paper achieved 90.2% accuracy and a ROC-AUC of 0.952. Chronos + Logistic Regression matched or exceeded this (ROC-AUC 0.960, PR-AUC 0.989) at a fraction of the compute cost, demonstrating that a frozen pretrained encoder paired with a simple classifier can substitute for a purpose-built sequence architecture on this task.
+
+Several extensions could strengthen these results. All models in this project used manually chosen hyperparameters, leaving performance on the table. Bayesian hyperparameter optimization via [Optuna](https://optuna.org) would efficiently search the parameter space without requiring exhaustive grid search — XGBoost and Chronos + LR are particularly good candidates given their fast training times (25s and 3.5s respectively). Experimenting with larger Chronos variants (T5-small or T5-base) could produce richer embeddings, and restricting the Chronos input to the five fire-index features (ERC, BI, VPD, FM100, FM1000) may improve signal quality by removing weather noise. Finally, addressing the synthetic negative events in the dataset and extending the held-out test period beyond four months would improve confidence in the reported metrics.
 ## Reproduction
 1. Clone the repository `git@github.com:Williamsillon/eco395m-ml-final-project.git`
 2. Install additional packages `pip install -r requirements`

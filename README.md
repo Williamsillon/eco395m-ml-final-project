@@ -37,10 +37,26 @@ We utilize dstack to accelerate our model training. We are using chronos forecas
 ### Exploratory Data Analysis
 The following visualizations are used to better understand the structure of the dataset and identify any patterns or inconsistencies before modeling. 
 
+### Class Balance 
+<img src="artifacts/class_balance.png" width="40%"/>
+
+Reconstructing sample-level labels by grouping the raw data into 75-day 
+windows and marking a window as positive if any day within it carries a 
+wildfire label, we find approximately 33,284 positive and 93,515 negative 
+sequences — a roughly 26/74 split. This differs from the paper's reported 
+40/60 split (50,720 positive, 76,080 negative) because the dataset only 
+provides a daily Wildfire label column rather than a sequence-level label. 
+Some sequences the paper designated as negative may contain days with 
+Wildfire = Yes due to nearby or overlapping fire activity, causing our 
+reconstruction to overcount positives in non-fire sequences. Regardless 
+of the exact split, the imbalance toward non-fire sequences motivated our 
+use of weighted cross-entropy loss and threshold tuning rather than 
+defaulting to a 0.5 decision boundary.
+
 #### Correlation Matrix
 <img src="artifacts/correlation_matrix.png" width="40%"/>
 
-*Blayne??*
+Several features are strongly correlated with one another. The fire behavior metrics including burning index (bi), energy release component (erc), and vapor pressure deficit (vpd) form a tight cluster, suggesting they capture overlapping information about fire-conducive conditions. Fuel moisture measures (fm100, fm1000) are inversely correlated with these fire metrics, consistent with physical expectations. High multicollinearity among these features suggests that dimensionality reduction (such as PCA, as used in our Chronos embedding pipeline) or regularized models may be preferable to naive feature concatenation.
 
 #### Feature Distributions
 <img src="artifacts/feature_distributions.png" width="40%"/>

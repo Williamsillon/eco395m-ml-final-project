@@ -86,6 +86,27 @@ We implement several neural network architectures to capture both spatial and te
 
 These models operate directly on the 3D sequence tensor without flattening and are appropriate to use for structured spatiotemporal data where both location-based and time-based patterns matter. All neural models use a weighted cross-entropy loss to handle class imbalance and are trained with the Adam optimizer.
 
+### Baseline Model Feature Importance
+
+| Feature | Description | Avg. Importance | Importance Std | Top Rank Count | Primary Model Drivers |
+|--------|-------------|-----------------|----------------|----------------|------------------------|
+| tmmn   | Temperature (min, °C) | 0.1095 | 0.0963 | 5 | CNN-LSTM, Logistic Regression, MLP, Two-Layer-LSTM |
+| fm1000 | Fuel moisture index (1000-hr, %) | 0.0634 | 0.0754 | 3 | Random Forest, KNN, CNN-LSTM |
+| fm100  | Fuel moisture index (100-hr, %) | 0.0355 | 0.0881 | 2 | LightTS-Inspired, Decision Tree |
+| erc    | Energy release component (index) | 0.0352 | 0.0431 | 2 | XGBoost, Gradient Boosting |
+| rmin   | Relative humidity (min, %) | 0.0224 | 0.0210 | 0 | KNN (#2), Decision Tree (#2) |
+| etr    | Evapotranspiration (actual, mm/day) | 0.0181 | 0.0553 | 0 | Logistic Regression (#2) |
+| bi     | Burning index (index) | 0.0177 | 0.0267 | 0 | Two-Layer-LSTM (#3), MLP (#4) |
+| vs     | Wind speed (m/s) | 0.0113 | 0.0151 | 0 | Gradient Boosting (#2), Logistic Regression (#6) |
+| tmmx   | Temperature (max, °C) | 0.0076 | 0.0125 | 0 | Random Forest (#2), Naive Bayes (#2) |
+| pet    | Evapotranspiration (potential, mm/day) | 0.0033 | 0.0101 | 0 | Logistic Regression (#8) |
+| pr     | Precipitation (mm/day) | 0.0029 | 0.0148 | 0 | Two-Layer-LSTM (#5) |
+| srad   | Solar radiation (W/m²) | 0.0025 | 0.0076 | 0 | Gradient Boosting (#4), CNN-LSTM (#7) |
+| sph    | Specific humidity (kg/kg) | 0.0024 | 0.0054 | 0 | Decision Tree (#6) |
+| vpd    | Vapor pressure deficit (kPa) | 0.0016 | 0.0032 | 0 | Random Forest (#4) |
+| rmax   | Relative humidity (max, %) | -0.0011 | 0.0035 | 0 | (Negligible impact) |
+
+
 #### Feature Embeddings with Chronos
 After obtaining baseline results, we extracted embeddings using a frozen pretrained Amazon Chronos T5 Mini model. Chronos embeddings summarize temporal patterns into a dense representation, allowing even simple models like logistic regression to capture time-dependent structure without explicitly modeling sequences. Each GRIDMET feature is encoded as a univariate time series, mean-pooled, and concatenated into a flat embedding per sample, then reduced via PCA before classification. The full implementation is in `train/train_table_iii_cloud.py`. We re-ran all baseline classifiers on these embeddings to evaluate whether richer temporal representations improve predictive performance.
 
@@ -122,6 +143,8 @@ We evaluated all of the aforementioned models using the same train/test split an
 | Chronos + Decision Tree* | 76.9 | 0.77 | 1.00 | 0.87 | 0.000 | 0.616 | 0.816 | 73.62 |
 | Chronos + Logistic Regression* | 88.7 | 0.91 | 0.95 | 0.93 | 0.409 | 0.960 | 0.989 | 3.51 |
 | Chronos + Naive Bayes* | 81.5 | 0.98 | 0.78 | 0.87 | 0.194 | 0.920 | 0.977 | 0.26 |
+
+
 
 These results indicate that our time-series aware models performed competitively against the classical baselines. The LightTS-Inspired model achieved the highest accuracy at 90.7%, an F1 of 0.94, and the highest PR-AUC of 0.991. Our proposed model, the CNN-LSTM, was the next best model with 90.2% accuracy, an F1 of 0.93, and an ROC-AUC of 0.952. This suggests that explicitly modeling the temporal structure of the 75-day sequences provides real predictive value beyond just simply flattening the features.
 

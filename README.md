@@ -164,7 +164,7 @@ cd eco395m-ml-final-project
 pip install -r train/requirements.txt
 ```
 
-2. Download the dataset by running `pulldata.ipynb`. This creates `Wildfire_Dataset.csv` in the project root.
+2. Download the dataset by running `pulldata.py`. This creates `Wildfire_Dataset.csv` in the project root.
 
 3. Run the full pipeline with dstack:
 

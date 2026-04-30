@@ -39,10 +39,26 @@ We utilize dstack to accelerate our model training. We are using chronos forecas
 ### Exploratory Data Analysis
 The following visualizations are used to better understand the structure of the dataset and identify any patterns or inconsistencies before modeling. 
 
+### Class Balance 
+<img src="artifacts/class_balance.png" width="40%"/>
+
+Reconstructing sample-level labels by grouping the raw data into 75-day 
+windows and marking a window as positive if any day within it carries a 
+wildfire label, we find approximately 33,284 positive and 93,515 negative 
+sequences — a roughly 26/74 split. This differs from the paper's reported 
+40/60 split (50,720 positive, 76,080 negative) because the dataset only 
+provides a daily Wildfire label column rather than a sequence-level label. 
+Some sequences the paper designated as negative may contain days with 
+Wildfire = Yes due to nearby or overlapping fire activity, causing our 
+reconstruction to overcount positives in non-fire sequences. Regardless 
+of the exact split, the imbalance toward non-fire sequences motivated our 
+use of weighted cross-entropy loss and threshold tuning rather than 
+defaulting to a 0.5 decision boundary.
+
 #### Correlation Matrix
 <img src="artifacts/correlation_matrix.png" width="40%"/>
 
-*Blayne??*
+Several features are strongly correlated with one another. The fire behavior metrics including burning index (bi), energy release component (erc), and vapor pressure deficit (vpd) form a tight cluster, suggesting they capture overlapping information about fire-conducive conditions. Fuel moisture measures (fm100, fm1000) are inversely correlated with these fire metrics, consistent with physical expectations. High multicollinearity among these features suggests that dimensionality reduction (such as PCA, as used in our Chronos embedding pipeline) or regularized models may be preferable to naive feature concatenation.
 
 #### Feature Distributions
 <img src="artifacts/feature_distributions.png" width="40%"/>
@@ -58,6 +74,9 @@ We examined how six key features trend across the 75-day window for wildfire ver
 The data covers only the continental United States from 2014 to 2025, so results may not generalize to other geographies, fire regimes (e.g. tropical or boreal), or longer climate windows. The dataset also does not include human factors that influence ignition — such as proximity to roads, power lines, or population centers — which are important real-world drivers of wildfire risk. Models trained on this data should therefore be understood as predicting weather and fuel-driven ignition risk specifically, not total wildfire risk.
 
 Additionally, the dataset's 76,080 negative (non-ignition) events are synthesized rather than directly observed, which can affect calibration and the interpretability of false-positive rates in deployment.
+
+The dataset provides only a daily Wildfire label column rather than a sequence-level label, making it impossible to exactly reproduce the paper's reported 40/60 positive/negative split from the raw data alone. Additionally, GRIDMET encodes missing readings with a sentinel value of 32,767.0. These rows were excluded from EDA visualizations but were not removed prior to model training, which may introduce noise for a small number of affected samples.
+
 ## Methodology
 First, we extracted our wildfire data from Kaggle using the Kaggle API. Then, we conducted a train and test split using a random split to follow the methodology of Spatiotemporal Wildfire Prediction and Reinforcement Learning for Helitack Suppression. From there, we conducted exploratory data analysis, creating visualizations, distributions, and performing basic data cleaning to better understand the structure of the dataset and identify any inconsistencies. In order to train the models, we transformed the data into 75x15 matrices that include prior period, ignition, post period, and model features. This allows us to incorporate both spatial and temporal dynamics of wildfire activity into the modeling framework. Our target variable is defined based on wildfire occurrence/intensity. All predictors are aligned to ensure consistency across time periods. We obtained baseline estimates of the following models: CNN-LSTM, XGBoost, Gradient Boosting, Random Forest, K-Nearest Neighbors, Simple-MLP, Decision Tree, Two-Layer-LSTM, LightTS-Inspired, Logistic Regression, and Naive Bayes. These models were chosen to capture a wide range of relationships in the data, including both linear and nonlinear patterns as well as temporal dependencies.
 

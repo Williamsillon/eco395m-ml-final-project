@@ -44,15 +44,15 @@ The following visualizations are used to better understand the structure of the 
 
 Reconstructing sample-level labels by grouping the raw data into 75-day windows and marking a window as positive if any day within it carries a wildfire label, we find approximately 33,284 positive and 93,515 negative sequences, which is roughly a 26/74 split. This differs from the paper's who reported a 40/60 split (50,720 positive, 76,080 negative) because the dataset only provides a daily Wildfire label column rather than a sequence-level label, so our reconstruction cannot perfectly reproduce the paper's original sequence designations. Regardless, the imbalance toward non-fire sequences motivated our use of weighted cross-entropy loss and threshold tuning rather than defaulting to a 0.5 decision boundary.
 
-#### Correlation Matrix
-<img src="artifacts/correlation_matrix.png" width="40%"/>
-
-Several features are strongly correlated with one another. The fire behavior metrics including burning index (bi), energy release component (erc), and vapor pressure deficit (vpd) form a tight cluster, suggesting they capture overlapping information about fire-conducive conditions. Fuel moisture measures (fm100, fm1000) are inversely correlated with these fire metrics, consistent with physical expectations. High multicollinearity among these features suggests that dimensionality reduction (such as PCA, as used in our Chronos embedding pipeline) or regularized models may be preferable to naive feature concatenation.
-
 #### Feature Distributions
 <img src="artifacts/feature_distributions.png" width="40%"/>
 
 We plotted the distribution of all 15 weather and fire behavior features separated by wildfire and non-wildfire days. The distributions show that wildfire days tend to have higher values for burning index, energy release component, vapor pressure deficit, and temperature, and lower values for fuel moisture and relative humidity. This makes intuitive sense as hot, dry conditions with low fuel moisture are the physical drivers of wildfire ignition and spread.
+
+#### Correlation Matrix
+<img src="artifacts/correlation_matrix.png" width="40%"/>
+
+Several features are strongly correlated with one another. The fire behavior metrics including burning index (bi), energy release component (erc), and vapor pressure deficit (vpd) form a tight cluster, suggesting they capture overlapping information about fire-conducive conditions. Fuel moisture measures (fm100, fm1000) are inversely correlated with these fire metrics, consistent with physical expectations. High multicollinearity among these features suggests that dimensionality reduction (such as PCA, as used in our Chronos embedding pipeline) or regularized models may be preferable to naive feature concatenation.
 
 #### Temporal Patterns
 <img src="artifacts/temporal_patterns.png" width="40%"/>

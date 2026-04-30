@@ -42,18 +42,7 @@ The following visualizations are used to better understand the structure of the 
 ### Class Balance 
 <img src="artifacts/class_balance.png" width="40%"/>
 
-Reconstructing sample-level labels by grouping the raw data into 75-day 
-windows and marking a window as positive if any day within it carries a 
-wildfire label, we find approximately 33,284 positive and 93,515 negative 
-sequences — a roughly 26/74 split. This differs from the paper's reported 
-40/60 split (50,720 positive, 76,080 negative) because the dataset only 
-provides a daily Wildfire label column rather than a sequence-level label. 
-Some sequences the paper designated as negative may contain days with 
-Wildfire = Yes due to nearby or overlapping fire activity, causing our 
-reconstruction to overcount positives in non-fire sequences. Regardless 
-of the exact split, the imbalance toward non-fire sequences motivated our 
-use of weighted cross-entropy loss and threshold tuning rather than 
-defaulting to a 0.5 decision boundary.
+Reconstructing sample-level labels by grouping the raw data into 75-day windows and marking a window as positive if any day within it carries a wildfire label, we find approximately 33,284 positive and 93,515 negative sequences, which is roughly a 26/74 split. This differs from the paper's who reported a 40/60 split (50,720 positive, 76,080 negative) because the dataset only provides a daily Wildfire label column rather than a sequence-level label, so our reconstruction cannot perfectly reproduce the paper's original sequence designations. Regardless, the imbalance toward non-fire sequences motivated our use of weighted cross-entropy loss and threshold tuning rather than defaulting to a 0.5 decision boundary.
 
 #### Correlation Matrix
 <img src="artifacts/correlation_matrix.png" width="40%"/>

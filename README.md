@@ -1,4 +1,4 @@
-# eco395m-ml-final-project
+# Predicting Wildfire Ignition Risk with Machine Learning and Pretrained Temporal Embeddings
 ## Project Overview
 The objective of this project is to predict forest fires by replicating a portion of _Spatiotemporal Wildfire Prediction and Reinforcement Learning for Helitack Suppression_. We evaluate eleven models ranging from classical baselines such as Logistic Regression and XGBoost to time-series aware neural architectures, including our proposed CNN-LSTM model. We benchmark each model against accuracy, precision, recall, threshold, F1, ROC-AUC, PR-AUC, and computation time.
 

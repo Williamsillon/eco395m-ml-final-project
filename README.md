@@ -120,5 +120,28 @@ The CNN-LSTM from the paper achieved 90.2% accuracy and a ROC-AUC of 0.952. Chro
 
 Several extensions could strengthen these results. All models in this project used manually chosen hyperparameters, leaving performance on the table. Bayesian hyperparameter optimization via [Optuna](https://optuna.org) would efficiently search the parameter space without requiring exhaustive grid search — XGBoost and Chronos + LR are particularly good candidates given their fast training times (25s and 3.5s respectively). Experimenting with larger Chronos variants (T5-small or T5-base) could produce richer embeddings, and restricting the Chronos input to the five fire-index features (ERC, BI, VPD, FM100, FM1000) may improve signal quality by removing weather noise. Finally, addressing the synthetic negative events in the dataset and extending the held-out test period beyond four months would improve confidence in the reported metrics.
 ## Reproduction
-1. Clone the repository `git@github.com:Williamsillon/eco395m-ml-final-project.git`
-2. Install additional packages `pip install -r requirements`
+Use Python 3.11 and configure a Kaggle API token at `~/.kaggle/kaggle.json`.
+
+1. Clone the repository and install dependencies:
+
+```bash
+git clone git@github.com:Williamsillon/eco395m-ml-final-project.git
+cd eco395m-ml-final-project
+pip install -r train/requirements.txt
+```
+
+2. Download the dataset by running `pulldata.ipynb`. This creates `Wildfire_Dataset.csv` in the project root.
+
+3. Run the full pipeline with dstack:
+
+```bash
+dstack run train/train-table-iii.dstack.yml
+```
+
+4. Or run locally:
+
+```bash
+python train/train_table_iii_cloud.py --data-path Wildfire_Dataset.csv --no-download
+```
+
+The dstack run saves artifacts to `/mnt/artifacts/table_iii_dstack/`. The final table used in this report is in `output/models_table.txt`.

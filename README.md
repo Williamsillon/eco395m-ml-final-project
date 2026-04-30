@@ -151,7 +151,7 @@ pip install -r train/requirements.txt
 3. Run the full pipeline with dstack:
 
 ```bash
-dstack run train/train-table-iii.dstack.yml
+dstack run . -f train/train-table-iii.dstack.yml
 ```
 
 4. Or run locally:
